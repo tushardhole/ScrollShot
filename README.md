@@ -1,20 +1,22 @@
 # ScrollShot
 
-You can use library to take full screen scroll shots of android app. Currently it supports scroll shots where entire activiry content is inside a ScrollView or WebView.
+You can use this library to take full screen scroll shots of android app. Currently it supports scroll shots where entire activiry content is inside a ScrollView or WebView.
 For other types of view, it will still try to take a scroll shot, but failing to do so will result in a normal legacy screenshot.
 
 
 To add this library to the android application project,
   1. Copy [library - aar] (https://github.com/tushardhole/ScrollShot/blob/master/aar/scrollshot.aar) to prebuilt-libs folder of your application
   2. Go to build.gradle add following dependency,
-  
-      compile(name: 'scrollshot', ext: 'aar')
 
-
+<code>
+    compile(name: 'scrollshot', ext: 'aar')
+</code>
 
 To use this library in your android application, add following line in onResume() of your specific activity or parent activity of all your activ ities.
 
-  - ScreenShotReceiver.setCurrentActivityReference(new WeakReference<Activity>(this));
+<code>
+  ScreenShotReceiver.setCurrentActivityReference(new WeakReference<Activity>(this));
+</code>
 
 To take a screenshot fire following command,
   - adb shell am broadcast -a com.mobile.android.scrollshot --es scene_name "homeScreen"
