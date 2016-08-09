@@ -15,6 +15,8 @@ import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.widget.ScrollView;
 
+import com.qozix.tileview.widgets.ZoomPanLayout;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -51,11 +53,14 @@ public class ScreenShotReceiver extends BroadcastReceiver {
       try {
         WebView webView;
         ScrollView scrollView;
+        ZoomPanLayout zoomPanLayout;
 
         if ((scrollView = findViewByType(rootGroup, ScrollView.class)) != null) {
           takeScrollShot(scrollView);
         } else if ((webView = findViewByType(rootGroup, WebView.class)) != null) {
           takeScrollShot(webView);
+        } else if ((zoomPanLayout = findViewByType(rootGroup, ZoomPanLayout.class)) != null) {
+          takeScrollShot(zoomPanLayout);
         } else {
           takeScrollShot(rootGroup.getChildAt(0));
         }
@@ -76,7 +81,10 @@ public class ScreenShotReceiver extends BroadcastReceiver {
             viewType.isAssignableFrom(content.getChildAt(i).getClass())) {
           return (T) content.getChildAt(i);
         } else if (content.getChildAt(i) instanceof ViewGroup) {
-          return findViewByType((ViewGroup) content.getChildAt(i), viewType);
+          T viewGroup = findViewByType((ViewGroup) content.getChildAt(i), viewType);
+          if (viewGroup != null) {
+            return viewGroup;
+          }
         }
       }
     }
@@ -96,15 +104,21 @@ public class ScreenShotReceiver extends BroadcastReceiver {
       view.measure(View.MeasureSpec.makeMeasureSpec(view.getMeasuredWidth(), View.MeasureSpec.EXACTLY),
           View.MeasureSpec.UNSPECIFIED);
     }
+
     int height = view.getMeasuredHeight();
     int width = view.getMeasuredWidth();
+
+    if (view instanceof ZoomPanLayout) {
+      height = ((ZoomPanLayout) view).getScaledHeight();
+      width = ((ZoomPanLayout) view).getScaledWidth();
+    }
 
     Bitmap viewScene = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
     Canvas sceneCanvas = new Canvas(viewScene);
 
     Drawable sceneBackground = view.getBackground();
     if (sceneBackground != null) {
-      sceneBackground.setBounds(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
+      sceneBackground.setBounds(0, 0, width, height);
       sceneBackground.draw(sceneCanvas);
     }
 
