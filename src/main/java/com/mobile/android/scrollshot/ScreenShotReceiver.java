@@ -28,12 +28,13 @@ public class ScreenShotReceiver extends BroadcastReceiver {
   private final String SCREENSHOT_RECEIVER_ACTION = "com.mobile.android.scrollshot";
   private final String SCREENSHOT_PATH = Environment.getExternalStorageDirectory().toString()
       + "/screenshots/";
-  private final String SCENE_NAME_BUNDLE_KEY = "scene_name";
+  private final String NAME_BUNDLE_KEY = "name";
 
   private static WeakReference<Activity> currentActivityReference;
-  private String sceneName = "_screenshot";
+  private String sceneName = System.currentTimeMillis() + "_screenshot";
+  private Drawable background;
 
-  public ScreenShotReceiver(){
+  public ScreenShotReceiver() {
   }
 
   @SuppressWarnings("unused")
@@ -43,12 +44,13 @@ public class ScreenShotReceiver extends BroadcastReceiver {
 
   @Override
   public void onReceive(Context context, Intent intent) {
-    if (!TextUtils.isEmpty(intent.getStringExtra("scene_name"))) {
-      sceneName = intent.getStringExtra(SCENE_NAME_BUNDLE_KEY);
+    if (!TextUtils.isEmpty(intent.getStringExtra(NAME_BUNDLE_KEY))) {
+      sceneName = intent.getStringExtra(NAME_BUNDLE_KEY);
     }
     Activity activity = currentActivityReference.get();
     if (intent.getAction().equals(SCREENSHOT_RECEIVER_ACTION) && activity != null) {
       ViewGroup rootGroup = (ViewGroup) activity.findViewById(android.R.id.content);
+      background = findTopMostValidBackground(rootGroup);
 
       try {
         WebView webView;
@@ -116,10 +118,9 @@ public class ScreenShotReceiver extends BroadcastReceiver {
     Bitmap viewScene = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
     Canvas sceneCanvas = new Canvas(viewScene);
 
-    Drawable sceneBackground = view.getBackground();
-    if (sceneBackground != null) {
-      sceneBackground.setBounds(0, 0, width, height);
-      sceneBackground.draw(sceneCanvas);
+    if (background != null) {
+      background.setBounds(0, 0, width, height);
+      background.draw(sceneCanvas);
     }
 
     view.draw(sceneCanvas);
@@ -143,5 +144,23 @@ public class ScreenShotReceiver extends BroadcastReceiver {
     } catch (IOException e) {
       e.printStackTrace();
     }
+  }
+
+  private Drawable findTopMostValidBackground(ViewGroup rootGroup) {
+    if (rootGroup.getBackground() != null) {
+      return rootGroup.getBackground();
+    } else {
+      for (int i = 0; i < rootGroup.getChildCount(); i++) {
+        if (rootGroup.getChildAt(i).getBackground() != null) {
+          return rootGroup.getChildAt(i).getBackground();
+        } else if (rootGroup.getChildAt(i) instanceof ViewGroup) {
+          Drawable background = findTopMostValidBackground((ViewGroup) rootGroup.getChildAt(i));
+          if (background != null) {
+            return background;
+          }
+        }
+      }
+    }
+    return null;
   }
 }
