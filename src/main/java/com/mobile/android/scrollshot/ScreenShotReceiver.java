@@ -67,14 +67,18 @@ public class ScreenShotReceiver extends BroadcastReceiver {
           takeScrollShot(rootGroup.getChildAt(0));
         }
       } catch (Exception e) {
-        fallBackToNormalScreenShot(rootGroup.getChildAt(0));
+        try {
+          fallBackToNormalScreenShot(rootGroup.getChildAt(0));
+        } catch (IOException e1) {
+          e1.printStackTrace();
+        }
       }
 
     }
   }
 
   @Nullable
-  private <T> T findViewByType(ViewGroup content, Class<T> viewType) {
+  private <T> T findViewByType(ViewGroup content, Class<T> viewType) throws IOException {
     if (viewType.isAssignableFrom(content.getClass())) {
       return (T) content;
     } else {
@@ -93,15 +97,15 @@ public class ScreenShotReceiver extends BroadcastReceiver {
     return null;
   }
 
-  private void fallBackToNormalScreenShot(View rootView) {
+  private void fallBackToNormalScreenShot(View rootView) throws IOException {
     takeScreenShot(rootView, false);
   }
 
-  private void takeScrollShot(View view) {
+  private void takeScrollShot(View view) throws IOException {
     takeScreenShot(view, true);
   }
 
-  private void takeScreenShot(final View view, boolean isScrollShot) {
+  private void takeScreenShot(final View view, boolean isScrollShot) throws IOException {
     if (isScrollShot) {
       view.measure(View.MeasureSpec.makeMeasureSpec(view.getMeasuredWidth(), View.MeasureSpec.EXACTLY),
           View.MeasureSpec.UNSPECIFIED);
@@ -127,22 +131,24 @@ public class ScreenShotReceiver extends BroadcastReceiver {
     writeSceneDataToFile(viewScene);
   }
 
-  private void writeSceneDataToFile(Bitmap viewScene) {
+  private void writeSceneDataToFile(Bitmap viewScene) throws IOException {
     File imageFile = new File(SCREENSHOT_PATH);
     imageFile.mkdirs();
     imageFile = new File(imageFile + "/" + sceneName + ".png");
+    FileOutputStream fos = new FileOutputStream(imageFile);
 
     try {
       ByteArrayOutputStream screenShotOutputStream = new ByteArrayOutputStream();
       viewScene.compress(Bitmap.CompressFormat.PNG, 90, screenShotOutputStream);
       byte[] sceneData = screenShotOutputStream.toByteArray();
 
-      FileOutputStream fos = new FileOutputStream(imageFile);
       fos.write(sceneData);
       fos.flush();
       fos.close();
     } catch (IOException e) {
       e.printStackTrace();
+    } finally {
+      fos.close();
     }
   }
 
