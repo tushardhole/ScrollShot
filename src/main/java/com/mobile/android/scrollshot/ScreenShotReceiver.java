@@ -33,6 +33,7 @@ public class ScreenShotReceiver extends BroadcastReceiver {
   private static WeakReference<Activity> currentActivityReference;
   private String sceneName = System.currentTimeMillis() + "_screenshot";
   private Drawable background;
+  private ViewGroup rootGroup = null;
 
   public ScreenShotReceiver() {
   }
@@ -49,7 +50,7 @@ public class ScreenShotReceiver extends BroadcastReceiver {
     }
     Activity activity = currentActivityReference.get();
     if (intent.getAction().equals(SCREENSHOT_RECEIVER_ACTION) && activity != null) {
-      ViewGroup rootGroup = (ViewGroup) activity.findViewById(android.R.id.content);
+      rootGroup = (ViewGroup) activity.findViewById(android.R.id.content);
       background = findTopMostValidBackground(rootGroup);
 
       try {
@@ -70,6 +71,8 @@ public class ScreenShotReceiver extends BroadcastReceiver {
         try {
           fallBackToNormalScreenShot(rootGroup.getChildAt(0));
         } catch (IOException e1) {
+          e1.printStackTrace();
+        } catch (InterruptedException e1) {
           e1.printStackTrace();
         }
       }
@@ -97,15 +100,15 @@ public class ScreenShotReceiver extends BroadcastReceiver {
     return null;
   }
 
-  private void fallBackToNormalScreenShot(View rootView) throws IOException {
+  private void fallBackToNormalScreenShot(View rootView) throws IOException, InterruptedException {
     takeScreenShot(rootView, false);
   }
 
-  private void takeScrollShot(View view) throws IOException {
+  private void takeScrollShot(View view) throws IOException, InterruptedException {
     takeScreenShot(view, true);
   }
 
-  private void takeScreenShot(final View view, boolean isScrollShot) throws IOException {
+  private void takeScreenShot(final View view, boolean isScrollShot) throws IOException, InterruptedException {
     if (isScrollShot) {
       view.measure(View.MeasureSpec.makeMeasureSpec(view.getMeasuredWidth(), View.MeasureSpec.EXACTLY),
           View.MeasureSpec.UNSPECIFIED);
@@ -127,7 +130,17 @@ public class ScreenShotReceiver extends BroadcastReceiver {
       background.draw(sceneCanvas);
     }
 
-    view.draw(sceneCanvas);
+    if (isScrollShot) {
+      int widSpec = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY);
+      int heightSpec = View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY);
+      rootGroup.getChildAt(0).measure(widSpec, heightSpec);
+      rootGroup.getChildAt(0).layout(0, 0, width, height);
+      rootGroup.getChildAt(0).draw(sceneCanvas);
+    } else {
+      view.draw(sceneCanvas);
+    }
+
+    FalconExtension.takeDilaog(sceneCanvas, currentActivityReference.get());
     writeSceneDataToFile(viewScene);
   }
 
@@ -168,5 +181,16 @@ public class ScreenShotReceiver extends BroadcastReceiver {
       }
     }
     return null;
+  }
+
+  private void restartActivity() {
+    currentActivityReference.get().finish();
+    startSelf();
+  }
+
+  protected void startSelf() {
+    currentActivityReference.get().
+        getApplicationContext().
+        startActivity(currentActivityReference.get().getIntent());
   }
 }
