@@ -13,8 +13,6 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebView;
-import android.widget.ScrollView;
 import android.widget.Toast;
 
 import com.qozix.tileview.widgets.ZoomPanLayout;
@@ -24,7 +22,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.util.logging.Logger;
 
 import static android.view.View.MeasureSpec.EXACTLY;
 import static android.widget.Toast.LENGTH_SHORT;
@@ -193,16 +190,5 @@ public class ScrollShotReceiver extends BroadcastReceiver {
     int heightSpec = View.MeasureSpec.makeMeasureSpec(originalHeight, EXACTLY);
     int widSpec = View.MeasureSpec.makeMeasureSpec(originalWidth, EXACTLY);
     rootGroup.getChildAt(0).measure(widSpec, heightSpec);
-  }
-
-  private void restartActivity() {
-    currentActivityReference.get().finish();
-    startSelf();
-  }
-
-  protected void startSelf() {
-    currentActivityReference.get().
-        getApplicationContext().
-        startActivity(currentActivityReference.get().getIntent());
   }
 }

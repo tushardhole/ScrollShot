@@ -78,7 +78,6 @@ public class FalconExtension {
     if (rootViews.isEmpty()) {
       return Collections.emptyList();
     }
-//    offsetRootsTopLeft(rootViews);
     ensureDialogsAreAfterItsParentActivities(rootViews);
 
     return rootViews;
