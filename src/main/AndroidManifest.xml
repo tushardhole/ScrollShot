@@ -6,13 +6,12 @@
         android:supportsRtl="true">
 
         <receiver
-            android:name="com.mobile.android.scrollshot.ScreenShotReceiver"
+            android:name="com.mobile.android.scrollshot.ScrollShotReceiver"
             android:enabled="true">
             <intent-filter android:priority="999">
                 <action android:name="com.mobile.android.scrollshot"></action>
             </intent-filter>
         </receiver>
-
     </application>
 
 </manifest>

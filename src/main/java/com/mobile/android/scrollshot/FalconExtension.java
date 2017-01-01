@@ -65,17 +65,6 @@ public class FalconExtension {
 
       View view = (View) getFieldValue("mView", root);
 
-      // fixes https://github.com/jraska/Falcon/issues/10
-      if (view == null) {
-        Log.e(TAG, "null View stored as root in Global window manager, skipping");
-        continue;
-      }
-      try {
-        view.measure(View.MeasureSpec.EXACTLY, View.MeasureSpec.UNSPECIFIED);
-      } catch (Exception e) {
-
-      }
-
       Object attachInfo = getFieldValue("mAttachInfo", root);
       int top = (int) getFieldValue("mWindowTop", attachInfo);
       int left = (int) getFieldValue("mWindowLeft", attachInfo);
@@ -89,7 +78,7 @@ public class FalconExtension {
     if (rootViews.isEmpty()) {
       return Collections.emptyList();
     }
-    offsetRootsTopLeft(rootViews);
+//    offsetRootsTopLeft(rootViews);
     ensureDialogsAreAfterItsParentActivities(rootViews);
 
     return rootViews;
@@ -269,6 +258,13 @@ public class FalconExtension {
   }
 
   private static void drawRootToBitmap(ViewRootData config) {
+    int restoreCount = scene.save();
+    int[] location = new int[2];
+    Rect r = new Rect();
+    config._view.getDrawingRect(r);
+    config._view.getLocationOnScreen(location);
+    scene.clipRect(r);
     config._view.draw(scene);
+    scene.restoreToCount(restoreCount);
   }
 }
