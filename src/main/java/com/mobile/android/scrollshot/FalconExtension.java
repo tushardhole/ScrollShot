@@ -8,7 +8,6 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Looper;
-import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 
@@ -134,24 +133,6 @@ public class FalconExtension {
     return null;
   }
 
-  private static void offsetRootsTopLeft(List<ViewRootData> rootViews) {
-    int minTop = Integer.MAX_VALUE;
-    int minLeft = Integer.MAX_VALUE;
-    for (ViewRootData rootView : rootViews) {
-      if (rootView._winFrame.top < minTop) {
-        minTop = rootView._winFrame.top;
-      }
-
-      if (rootView._winFrame.left < minLeft) {
-        minLeft = rootView._winFrame.left;
-      }
-    }
-
-    for (ViewRootData rootView : rootViews) {
-      rootView._winFrame.offset(-minLeft, -minTop);
-    }
-  }
-
   private static Object getFieldValue(String fieldName, Object target) {
     try {
       return getFieldValueUnchecked(fieldName, target);
@@ -257,13 +238,9 @@ public class FalconExtension {
   }
 
   private static void drawRootToBitmap(ViewRootData config) {
-    int restoreCount = scene.save();
     int[] location = new int[2];
-    Rect r = new Rect();
-    config._view.getDrawingRect(r);
     config._view.getLocationOnScreen(location);
-    scene.clipRect(r);
-    config._view.draw(scene);
-    scene.restoreToCount(restoreCount);
+    config._view.buildDrawingCache();
+    scene.drawBitmap(config._view.getDrawingCache(), location[0], location[1], null);
   }
 }
