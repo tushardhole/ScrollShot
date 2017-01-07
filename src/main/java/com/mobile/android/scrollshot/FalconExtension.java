@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Looper;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.WindowManager;
 
@@ -16,6 +17,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+
+import static android.view.WindowManager.LayoutParams;
 
 /**
  * This code is inspired/Copied from below open source project.
@@ -46,17 +49,17 @@ public class FalconExtension {
     Object paramsObject = getFieldValue("mParams", globalWindowManager);
 
     Object[] roots;
-    WindowManager.LayoutParams[] params;
+    LayoutParams[] params;
 
     //  There was a change to ArrayList implementation in 4.4
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
       roots = ((List) rootObjects).toArray();
 
       List<WindowManager.LayoutParams> paramsList = (List<WindowManager.LayoutParams>) paramsObject;
-      params = paramsList.toArray(new WindowManager.LayoutParams[paramsList.size()]);
+      params = paramsList.toArray(new LayoutParams[paramsList.size()]);
     } else {
       roots = (Object[]) rootObjects;
-      params = (WindowManager.LayoutParams[]) paramsObject;
+      params = (LayoutParams[]) paramsObject;
     }
 
     for (int i = 0; i < roots.length; i++) {
@@ -169,20 +172,21 @@ public class FalconExtension {
   private static class ViewRootData {
     private final View _view;
     private final Rect _winFrame;
-    private final WindowManager.LayoutParams _layoutParams;
+    private final LayoutParams _layoutParams;
 
-    ViewRootData(View view, Rect winFrame, WindowManager.LayoutParams layoutParams) {
+    ViewRootData(View view, Rect winFrame, LayoutParams layoutParams) {
       _view = view;
       _winFrame = winFrame;
       _layoutParams = layoutParams;
     }
 
     boolean isDialogType() {
-      return _layoutParams.type == WindowManager.LayoutParams.TYPE_APPLICATION;
+      return (_layoutParams.type == LayoutParams.TYPE_APPLICATION) ||
+          (_layoutParams.type == LayoutParams.TYPE_APPLICATION_PANEL);
     }
 
     boolean isActivityType() {
-      return _layoutParams.type == WindowManager.LayoutParams.TYPE_BASE_APPLICATION;
+      return _layoutParams.type == LayoutParams.TYPE_BASE_APPLICATION;
     }
 
     Context context() {
@@ -192,9 +196,6 @@ public class FalconExtension {
 
   private static void takeBitmapUnchecked(Activity activity) throws InterruptedException {
     final List<ViewRootData> viewRoots = getRootViews(activity);
-    if (viewRoots.isEmpty()) {
-      //throw new UnableToTakeScreenshotException("Unable to capture any view data in " + activity);
-    }
 
     int maxWidth = Integer.MIN_VALUE;
     int maxHeight = Integer.MIN_VALUE;
@@ -238,9 +239,20 @@ public class FalconExtension {
   }
 
   private static void drawRootToBitmap(ViewRootData config) {
+    int actionBarOffset = getActionBarSize(config._view.getContext());
     int[] location = new int[2];
     config._view.getLocationOnScreen(location);
     config._view.buildDrawingCache();
-    scene.drawBitmap(config._view.getDrawingCache(), location[0], location[1], null);
+    scene.drawBitmap(config._view.getDrawingCache(), location[0], location[1] - actionBarOffset, null);
+  }
+
+  private static int getActionBarSize(Context context) {
+    int actionBarHeight = 0;
+    TypedValue tv = new TypedValue();
+    if (context.getTheme().resolveAttribute(android.R.attr.actionBarSize, tv, true)) {
+      actionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data,
+          context.getResources().getDisplayMetrics());
+    }
+    return actionBarHeight;
   }
 }
