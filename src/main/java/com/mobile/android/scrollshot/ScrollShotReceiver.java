@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.support.v4.view.ScrollingView;
 import android.text.TextUtils;
 import android.view.View;
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 
 import static android.widget.Toast.LENGTH_SHORT;
+import static com.mobile.android.scrollshot.FalconExtension.takeDilaog;
 
 public class ScrollShotReceiver extends BroadcastReceiver {
 
@@ -59,8 +61,6 @@ public class ScrollShotReceiver extends BroadcastReceiver {
     Activity activity = currentActivityReference.get();
     if (intent.getAction().equals(SCREENSHOT_RECEIVER_ACTION) && activity != null) {
       rootGroup = (ViewGroup) activity.findViewById(android.R.id.content);
-      background = findTopMostValidBackground(rootGroup);
-
       try {
         originalHeight = rootGroup.getHeight();
         originalWidth = rootGroup.getWidth();
@@ -86,30 +86,43 @@ public class ScrollShotReceiver extends BroadcastReceiver {
 
   private void takeScreenShot(boolean isScrollShot) throws IOException, InterruptedException {
     Bitmap viewScene;
-    Canvas sceneCanvas;
-
     if (isScrollShot) {
-      measureHeight();
-      int measuredHeight = rootGroup.getChildAt(0).getMeasuredHeight();
-      viewScene = Bitmap.createBitmap(originalWidth, measuredHeight, Bitmap.Config.ARGB_8888);
-      sceneCanvas = new Canvas(viewScene);
-      if (background != null) {
-        background.setBounds(0, 0, originalWidth, measuredHeight);
-        background.draw(sceneCanvas);
-      }
-      rootGroup.getChildAt(0).layout(0, 0, originalWidth, measuredHeight);
-      rootGroup.getChildAt(0).draw(sceneCanvas);
+      viewScene = takeScrollShot();
     } else {
-      viewScene = Bitmap.createBitmap(originalWidth, originalHeight, Bitmap.Config.ARGB_8888);
-      sceneCanvas = new Canvas(viewScene);
-      rootGroup.getChildAt(0).draw(sceneCanvas);
+      viewScene = takeNormalScreenShot();
     }
-    FalconExtension.takeDilaog(sceneCanvas, currentActivityReference.get());
     writeSceneDataToFile(viewScene);
     resetViewLayout();
   }
 
-  private void measureHeight() {
+  @NonNull
+  private Bitmap takeScrollShot() throws InterruptedException {
+    measureHeightWithScrollOffset();
+    int measuredHeight = rootGroup.getChildAt(0).getMeasuredHeight();
+    Bitmap viewScene = Bitmap.createBitmap(originalWidth, measuredHeight, Bitmap.Config.ARGB_8888);
+    Canvas sceneCanvas = createCanvasWithWindowBG(viewScene);
+    rootGroup.getChildAt(0).layout(0, 0, originalWidth, measuredHeight);
+    rootGroup.getChildAt(0).draw(sceneCanvas);
+    takeDilaog(sceneCanvas, currentActivityReference.get());
+    return viewScene;
+  }
+
+  private Bitmap takeNormalScreenShot() throws InterruptedException {
+    Bitmap viewScene = Bitmap.createBitmap(originalWidth, originalHeight, Bitmap.Config.ARGB_8888);
+    Canvas sceneCanvas = createCanvasWithWindowBG(viewScene);
+    rootGroup.getChildAt(0).draw(sceneCanvas);
+    takeDilaog(sceneCanvas, currentActivityReference.get());
+    return viewScene;
+  }
+
+  private Canvas createCanvasWithWindowBG(@NonNull Bitmap viewScene) {
+    Canvas sceneCanvas = new Canvas(viewScene);
+    currentActivityReference.get().getWindow()
+        .getDecorView().getBackground().draw(sceneCanvas);
+    return sceneCanvas;
+  }
+
+  private void measureHeightWithScrollOffset() {
     int baseHeightOfContainer = originalHeight + offset;
     int widSpec = View.MeasureSpec.makeMeasureSpec(originalWidth, View.MeasureSpec.EXACTLY);
     int heightSpec = View.MeasureSpec.makeMeasureSpec(baseHeightOfContainer, View.MeasureSpec.EXACTLY);
@@ -135,24 +148,6 @@ public class ScrollShotReceiver extends BroadcastReceiver {
     } finally {
       fos.close();
     }
-  }
-
-  private Drawable findTopMostValidBackground(ViewGroup rootGroup) {
-    if (rootGroup.getBackground() != null) {
-      return rootGroup.getBackground();
-    } else {
-      for (int i = 0; i < rootGroup.getChildCount(); i++) {
-        if (rootGroup.getChildAt(i).getBackground() != null) {
-          return rootGroup.getChildAt(i).getBackground();
-        } else if (rootGroup.getChildAt(i) instanceof ViewGroup) {
-          Drawable background = findTopMostValidBackground((ViewGroup) rootGroup.getChildAt(i));
-          if (background != null) {
-            return background;
-          }
-        }
-      }
-    }
-    return null;
   }
 
   private void resetViewLayout() {
