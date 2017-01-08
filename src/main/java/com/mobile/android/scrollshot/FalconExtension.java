@@ -22,7 +22,9 @@ import static android.view.WindowManager.LayoutParams;
 
 /**
  * This code is inspired/Copied from below open source project.
+ * The file is modified as per the requirement and is not in its original state.
  * https://github.com/jraska/Falcon
+ * LICENSE for original source: https://github.com/jraska/Falcon/blob/master/LICENSE
  */
 public class FalconExtension {
 
