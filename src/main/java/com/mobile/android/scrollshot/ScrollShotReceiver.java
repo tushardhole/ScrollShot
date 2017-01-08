@@ -44,6 +44,7 @@ public class ScrollShotReceiver extends BroadcastReceiver {
   private View decorView = null;
   private int offset = 0;
   private Map<Integer, Integer> offsetWithY = new HashMap<>();
+  private Map<View, int[]> scrollPos = new HashMap<>();
   private int originalWidth = 0;
   private int originalHeight = 0;
 
@@ -91,6 +92,7 @@ public class ScrollShotReceiver extends BroadcastReceiver {
       viewScene = takeNormalScreenShot();
     }
     writeSceneDataToFile(viewScene);
+    viewScene.recycle();
     resetViewLayout();
   }
 
@@ -98,7 +100,7 @@ public class ScrollShotReceiver extends BroadcastReceiver {
   private Bitmap takeScrolledScreenShot() throws InterruptedException {
     measureHeightWithScrollOffset();
     int measuredHeight = decorView.getMeasuredHeight();
-    Bitmap viewScene = Bitmap.createBitmap(originalWidth, measuredHeight, Bitmap.Config.ARGB_8888);
+    Bitmap viewScene = Bitmap.createBitmap(originalWidth, measuredHeight, Bitmap.Config.RGB_565 );
     Canvas sceneCanvas = new Canvas(viewScene);
     decorView.layout(0, 0, originalWidth, measuredHeight);
     decorView.draw(sceneCanvas);
@@ -107,7 +109,7 @@ public class ScrollShotReceiver extends BroadcastReceiver {
   }
 
   private Bitmap takeNormalScreenShot() throws InterruptedException {
-    Bitmap viewScene = Bitmap.createBitmap(originalWidth, originalHeight, Bitmap.Config.ARGB_8888);
+    Bitmap viewScene = Bitmap.createBitmap(originalWidth, originalHeight, Bitmap.Config.RGB_565);
     Canvas sceneCanvas = new Canvas(viewScene);
     decorView.draw(sceneCanvas);
     takeDilaog(sceneCanvas, currentActivityReference.get());
@@ -125,12 +127,12 @@ public class ScrollShotReceiver extends BroadcastReceiver {
     viewScene = cropStatusBar(viewScene);
     File imageFile = new File(SCREENSHOT_PATH);
     imageFile.mkdirs();
-    imageFile = new File(imageFile + "/" + sceneName + ".png");
+    imageFile = new File(imageFile + "/" + sceneName + ".jpeg");
     FileOutputStream fos = new FileOutputStream(imageFile);
 
     try {
       ByteArrayOutputStream screenShotOutputStream = new ByteArrayOutputStream();
-      viewScene.compress(Bitmap.CompressFormat.PNG, 90, screenShotOutputStream);
+      viewScene.compress(Bitmap.CompressFormat.JPEG, 90, screenShotOutputStream);
       byte[] sceneData = screenShotOutputStream.toByteArray();
 
       fos.write(sceneData);
@@ -156,6 +158,7 @@ public class ScrollShotReceiver extends BroadcastReceiver {
 
   private void resetViewLayout() {
     decorView.requestLayout();
+    //TODO: resetScrollPos();
   }
 
   private void findOffset(ViewGroup root) {
@@ -184,11 +187,25 @@ public class ScrollShotReceiver extends BroadcastReceiver {
           conflictingHeightWithSameY : newHeight;
       offsetWithY.put(y, newHeight - oldHeight);
     }
+    //TODO: //saveScrollPos(view);
+  }
+
+  private void saveScrollPos(View view) {
+    int[] currScrollPos = new int[2];
+    currScrollPos[0] = view.getScrollX();
+    currScrollPos[1] = view.getScrollY();
+    scrollPos.put(view, currScrollPos);
   }
 
   private void updateTotalOffset() {
     for (Map.Entry<Integer, Integer> entry : offsetWithY.entrySet()) {
       offset = offset + offsetWithY.get(entry.getKey());
+    }
+  }
+
+  private void resetScrollPos() {
+    for (Map.Entry<View, int[]> entry : scrollPos.entrySet()) {
+      entry.getKey().scrollTo(entry.getValue()[0], entry.getValue()[1]);
     }
   }
 }

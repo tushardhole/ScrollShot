@@ -243,5 +243,6 @@ public class FalconExtension {
     config._view.getLocationOnScreen(location);
     config._view.buildDrawingCache();
     scene.drawBitmap(config._view.getDrawingCache(), location[0], location[1], null);
+    config._view.getDrawingCache().recycle();
   }
 }
