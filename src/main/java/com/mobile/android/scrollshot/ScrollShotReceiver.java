@@ -8,10 +8,8 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.Environment;
-import android.support.annotation.Nullable;
 import android.support.v4.view.ScrollingView;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
@@ -27,7 +25,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 
-import static android.view.View.MeasureSpec.EXACTLY;
 import static android.widget.Toast.LENGTH_SHORT;
 
 public class ScrollShotReceiver extends BroadcastReceiver {
@@ -65,20 +62,10 @@ public class ScrollShotReceiver extends BroadcastReceiver {
       background = findTopMostValidBackground(rootGroup);
 
       try {
-        ZoomPanLayout zoomPanLayout;
-        WebView webView;
         originalHeight = rootGroup.getHeight();
         originalWidth = rootGroup.getWidth();
         findOffset(rootGroup);
-
-        if ((zoomPanLayout = findViewByType(rootGroup, ZoomPanLayout.class)) != null) {
-          takeScrollShot(zoomPanLayout);
-        }
-        if ((webView = findViewByType(rootGroup, WebView.class)) != null) {
-          takeScrollShot(webView);
-        } else {
-          takeScrollShot(rootGroup.getChildAt(0));
-        }
+        takeScrollShot(rootGroup.getChildAt(0));
       } catch (Exception e) {
         try {
           fallBackToNormalScreenShot(rootGroup.getChildAt(0));
@@ -86,47 +73,23 @@ public class ScrollShotReceiver extends BroadcastReceiver {
           Toast.makeText(currentActivityReference.get(), "Failed to take scroll shot", LENGTH_SHORT);
         }
       }
-
     }
-  }
-
-  @Nullable
-  private <T> T findViewByType(ViewGroup content, Class<T> viewType) throws IOException {
-    if (content.getChildAt(0) != null) {
-      Log.d("Scroll", content.getClass().getSimpleName() + (content.getChildAt(0).getHeight() > content.getHeight()));
-    }
-    if (viewType.isAssignableFrom(content.getClass())) {
-      return (T) content;
-    } else {
-      for (int i = 0; i < content.getChildCount(); i++) {
-        if (content.getChildAt(i) != null &&
-            viewType.isAssignableFrom(content.getChildAt(i).getClass())) {
-          return (T) content.getChildAt(i);
-        } else if (content.getChildAt(i) instanceof ViewGroup) {
-          T viewGroup = findViewByType((ViewGroup) content.getChildAt(i), viewType);
-          if (viewGroup != null) {
-            return viewGroup;
-          }
-        }
-      }
-    }
-    return null;
   }
 
   private void fallBackToNormalScreenShot(View rootView) throws IOException, InterruptedException {
-    takeScreenShot(rootView, false);
+    takeScreenShot(false);
   }
 
   private void takeScrollShot(View view) throws IOException, InterruptedException {
-    takeScreenShot(view, true);
+    takeScreenShot(true);
   }
 
-  private void takeScreenShot(final View view, boolean isScrollShot) throws IOException, InterruptedException {
-    Bitmap viewScene = null;
+  private void takeScreenShot(boolean isScrollShot) throws IOException, InterruptedException {
+    Bitmap viewScene;
     Canvas sceneCanvas;
 
     if (isScrollShot) {
-      measureHeight(view);
+      measureHeight();
       int measuredHeight = rootGroup.getChildAt(0).getMeasuredHeight();
       viewScene = Bitmap.createBitmap(originalWidth, measuredHeight, Bitmap.Config.ARGB_8888);
       sceneCanvas = new Canvas(viewScene);
@@ -143,10 +106,10 @@ public class ScrollShotReceiver extends BroadcastReceiver {
     }
     FalconExtension.takeDilaog(sceneCanvas, currentActivityReference.get());
     writeSceneDataToFile(viewScene);
-    resetView(originalHeight, originalWidth);
+    resetViewLayout();
   }
 
-  private void measureHeight(View root) {
+  private void measureHeight() {
     int baseHeightOfContainer = originalHeight + offset;
     int widSpec = View.MeasureSpec.makeMeasureSpec(originalWidth, View.MeasureSpec.EXACTLY);
     int heightSpec = View.MeasureSpec.makeMeasureSpec(baseHeightOfContainer, View.MeasureSpec.EXACTLY);
@@ -192,28 +155,28 @@ public class ScrollShotReceiver extends BroadcastReceiver {
     return null;
   }
 
-  private void resetView(int originalHeight, int originalWidth) {
-    int heightSpec = View.MeasureSpec.makeMeasureSpec(originalHeight, EXACTLY);
-    int widSpec = View.MeasureSpec.makeMeasureSpec(originalWidth, EXACTLY);
-    rootGroup.getChildAt(0).measure(widSpec, heightSpec);
+  private void resetViewLayout() {
+    rootGroup.requestLayout();
   }
 
   private void findOffset(ViewGroup root) {
     for (int index = 0; index < root.getChildCount(); index++) {
       View child = root.getChildAt(index);
       if (child instanceof ScrollView || child instanceof ScrollingView || child instanceof AbsListView || child instanceof WebView) {
-        int originalHeight = child.getHeight();
         int widSpec = View.MeasureSpec.makeMeasureSpec(originalWidth, View.MeasureSpec.EXACTLY);
         int heightSpec = View.MeasureSpec.makeMeasureSpec(BIG_ENOUGH_HEIGHT, View.MeasureSpec.UNSPECIFIED);
         child.measure(widSpec, heightSpec);
-        if (child.getMeasuredHeight() > originalHeight) {
-          offset = offset + (child.getMeasuredHeight() - originalHeight);
-        }
+        updateOffset(child.getHeight(), child.getMeasuredHeight());
       } else if (child instanceof ZoomPanLayout) {
-        offset = offset + (((ZoomPanLayout) child).getScaledHeight() - child.getHeight());
+        updateOffset(child.getHeight(), ((ZoomPanLayout) child).getScaledHeight());
       } else if (child instanceof ViewGroup) {
         findOffset((ViewGroup) child);
       }
     }
+  }
+
+  private void updateOffset(int oldHeight, int newHeight) {
+    offset = newHeight > oldHeight ?
+        offset + (newHeight - oldHeight) : offset;
   }
 }
