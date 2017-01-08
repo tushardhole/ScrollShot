@@ -6,7 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.drawable.Drawable;
+import android.graphics.Rect;
 import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.v4.view.ScrollingView;
@@ -25,6 +25,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.HashMap;
+import java.util.Map;
 
 import static android.widget.Toast.LENGTH_SHORT;
 import static com.mobile.android.scrollshot.FalconExtension.takeDilaog;
@@ -39,9 +41,9 @@ public class ScrollShotReceiver extends BroadcastReceiver {
 
   private static WeakReference<Activity> currentActivityReference;
   private String sceneName = System.currentTimeMillis() + "_screenshot";
-  private Drawable background;
-  private ViewGroup rootGroup = null;
+  private View decorView = null;
   private int offset = 0;
+  private Map<Integer, Integer> offsetWithY = new HashMap<>();
   private int originalWidth = 0;
   private int originalHeight = 0;
 
@@ -60,15 +62,16 @@ public class ScrollShotReceiver extends BroadcastReceiver {
     }
     Activity activity = currentActivityReference.get();
     if (intent.getAction().equals(SCREENSHOT_RECEIVER_ACTION) && activity != null) {
-      rootGroup = (ViewGroup) activity.findViewById(android.R.id.content);
+      decorView = currentActivityReference.get().getWindow().getDecorView();
       try {
-        originalHeight = rootGroup.getHeight();
-        originalWidth = rootGroup.getWidth();
-        findOffset(rootGroup);
-        takeScrollShot(rootGroup.getChildAt(0));
+        originalHeight = currentActivityReference.get().getWindow().getDecorView().getHeight();
+        originalWidth = currentActivityReference.get().getWindow().getDecorView().getWidth();
+        findOffset((ViewGroup) activity.findViewById(android.R.id.content));
+        updateTotalOffset();
+        takeScreenShot(true);
       } catch (Exception e) {
         try {
-          fallBackToNormalScreenShot(rootGroup.getChildAt(0));
+          fallBackToNormalScreenShot();
         } catch (Exception e1) {
           Toast.makeText(currentActivityReference.get(), "Failed to take scroll shot", LENGTH_SHORT);
         }
@@ -76,18 +79,14 @@ public class ScrollShotReceiver extends BroadcastReceiver {
     }
   }
 
-  private void fallBackToNormalScreenShot(View rootView) throws IOException, InterruptedException {
+  private void fallBackToNormalScreenShot() throws IOException, InterruptedException {
     takeScreenShot(false);
-  }
-
-  private void takeScrollShot(View view) throws IOException, InterruptedException {
-    takeScreenShot(true);
   }
 
   private void takeScreenShot(boolean isScrollShot) throws IOException, InterruptedException {
     Bitmap viewScene;
     if (isScrollShot) {
-      viewScene = takeScrollShot();
+      viewScene = takeScrolledScreenShot();
     } else {
       viewScene = takeNormalScreenShot();
     }
@@ -96,40 +95,34 @@ public class ScrollShotReceiver extends BroadcastReceiver {
   }
 
   @NonNull
-  private Bitmap takeScrollShot() throws InterruptedException {
+  private Bitmap takeScrolledScreenShot() throws InterruptedException {
     measureHeightWithScrollOffset();
-    int measuredHeight = rootGroup.getChildAt(0).getMeasuredHeight();
+    int measuredHeight = decorView.getMeasuredHeight();
     Bitmap viewScene = Bitmap.createBitmap(originalWidth, measuredHeight, Bitmap.Config.ARGB_8888);
-    Canvas sceneCanvas = createCanvasWithWindowBG(viewScene);
-    rootGroup.getChildAt(0).layout(0, 0, originalWidth, measuredHeight);
-    rootGroup.getChildAt(0).draw(sceneCanvas);
+    Canvas sceneCanvas = new Canvas(viewScene);
+    decorView.layout(0, 0, originalWidth, measuredHeight);
+    decorView.draw(sceneCanvas);
     takeDilaog(sceneCanvas, currentActivityReference.get());
     return viewScene;
   }
 
   private Bitmap takeNormalScreenShot() throws InterruptedException {
     Bitmap viewScene = Bitmap.createBitmap(originalWidth, originalHeight, Bitmap.Config.ARGB_8888);
-    Canvas sceneCanvas = createCanvasWithWindowBG(viewScene);
-    rootGroup.getChildAt(0).draw(sceneCanvas);
+    Canvas sceneCanvas = new Canvas(viewScene);
+    decorView.draw(sceneCanvas);
     takeDilaog(sceneCanvas, currentActivityReference.get());
     return viewScene;
-  }
-
-  private Canvas createCanvasWithWindowBG(@NonNull Bitmap viewScene) {
-    Canvas sceneCanvas = new Canvas(viewScene);
-    currentActivityReference.get().getWindow()
-        .getDecorView().getBackground().draw(sceneCanvas);
-    return sceneCanvas;
   }
 
   private void measureHeightWithScrollOffset() {
     int baseHeightOfContainer = originalHeight + offset;
     int widSpec = View.MeasureSpec.makeMeasureSpec(originalWidth, View.MeasureSpec.EXACTLY);
     int heightSpec = View.MeasureSpec.makeMeasureSpec(baseHeightOfContainer, View.MeasureSpec.EXACTLY);
-    rootGroup.getChildAt(0).measure(widSpec, heightSpec);
+    currentActivityReference.get().getWindow().getDecorView().measure(widSpec, heightSpec);
   }
 
   private void writeSceneDataToFile(Bitmap viewScene) throws IOException {
+    viewScene = cropStatusBar(viewScene);
     File imageFile = new File(SCREENSHOT_PATH);
     imageFile.mkdirs();
     imageFile = new File(imageFile + "/" + sceneName + ".png");
@@ -150,8 +143,19 @@ public class ScrollShotReceiver extends BroadcastReceiver {
     }
   }
 
+  private Bitmap cropStatusBar(Bitmap decorView) {
+    Rect rect = new Rect();
+    currentActivityReference.get().getWindow().
+        getDecorView().getWindowVisibleDisplayFrame(rect);
+    int statusBarHeight = rect.top;
+    Bitmap crop = Bitmap.createBitmap(decorView, 0, statusBarHeight,
+        decorView.getWidth(), decorView.getHeight() - statusBarHeight);
+    decorView.recycle();
+    return crop;
+  }
+
   private void resetViewLayout() {
-    rootGroup.requestLayout();
+    decorView.requestLayout();
   }
 
   private void findOffset(ViewGroup root) {
@@ -161,17 +165,30 @@ public class ScrollShotReceiver extends BroadcastReceiver {
         int widSpec = View.MeasureSpec.makeMeasureSpec(originalWidth, View.MeasureSpec.EXACTLY);
         int heightSpec = View.MeasureSpec.makeMeasureSpec(BIG_ENOUGH_HEIGHT, View.MeasureSpec.UNSPECIFIED);
         child.measure(widSpec, heightSpec);
-        updateOffset(child.getHeight(), child.getMeasuredHeight());
+        updateOffset(child.getHeight(), child.getMeasuredHeight(), child);
       } else if (child instanceof ZoomPanLayout) {
-        updateOffset(child.getHeight(), ((ZoomPanLayout) child).getScaledHeight());
+        updateOffset(child.getHeight(), ((ZoomPanLayout) child).getScaledHeight(), child);
       } else if (child instanceof ViewGroup) {
         findOffset((ViewGroup) child);
       }
     }
   }
 
-  private void updateOffset(int oldHeight, int newHeight) {
-    offset = newHeight > oldHeight ?
-        offset + (newHeight - oldHeight) : offset;
+  private void updateOffset(int oldHeight, int newHeight, View view) {
+    int[] location = new int[2];
+    view.getLocationOnScreen(location);
+    int y = location[1];
+    if (newHeight > oldHeight) {
+      Integer conflictingHeightWithSameY = offsetWithY.get(y);
+      newHeight = conflictingHeightWithSameY != null && conflictingHeightWithSameY > newHeight ?
+          conflictingHeightWithSameY : newHeight;
+      offsetWithY.put(y, newHeight - oldHeight);
+    }
+  }
+
+  private void updateTotalOffset() {
+    for (Map.Entry<Integer, Integer> entry : offsetWithY.entrySet()) {
+      offset = offset + offsetWithY.get(entry.getKey());
+    }
   }
 }

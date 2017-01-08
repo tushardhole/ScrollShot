@@ -239,20 +239,9 @@ public class FalconExtension {
   }
 
   private static void drawRootToBitmap(ViewRootData config) {
-    int actionBarOffset = getActionBarSize(config._view.getContext());
     int[] location = new int[2];
     config._view.getLocationOnScreen(location);
     config._view.buildDrawingCache();
-    scene.drawBitmap(config._view.getDrawingCache(), location[0], location[1] - actionBarOffset, null);
-  }
-
-  private static int getActionBarSize(Context context) {
-    int actionBarHeight = 0;
-    TypedValue tv = new TypedValue();
-    if (context.getTheme().resolveAttribute(android.R.attr.actionBarSize, tv, true)) {
-      actionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data,
-          context.getResources().getDisplayMetrics());
-    }
-    return actionBarHeight;
+    scene.drawBitmap(config._view.getDrawingCache(), location[0], location[1], null);
   }
 }
