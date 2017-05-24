@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.os.Build;
 import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.v4.view.ScrollingView;
@@ -100,7 +101,7 @@ public class ScrollShotReceiver extends BroadcastReceiver {
   private Bitmap takeScrolledScreenShot() throws InterruptedException {
     measureHeightWithScrollOffset();
     int measuredHeight = decorView.getMeasuredHeight();
-    Bitmap viewScene = Bitmap.createBitmap(originalWidth, measuredHeight, Bitmap.Config.RGB_565 );
+    Bitmap viewScene = Bitmap.createBitmap(originalWidth, measuredHeight, Bitmap.Config.RGB_565);
     Canvas sceneCanvas = new Canvas(viewScene);
     decorView.layout(0, 0, originalWidth, measuredHeight);
     decorView.draw(sceneCanvas);
@@ -158,7 +159,6 @@ public class ScrollShotReceiver extends BroadcastReceiver {
 
   private void resetViewLayout() {
     decorView.requestLayout();
-    //TODO: resetScrollPos();
   }
 
   private void findOffset(ViewGroup root) {
@@ -166,8 +166,13 @@ public class ScrollShotReceiver extends BroadcastReceiver {
       View child = root.getChildAt(index);
       if (child instanceof ScrollView || child instanceof ScrollingView || child instanceof AbsListView || child instanceof WebView) {
         int widSpec = View.MeasureSpec.makeMeasureSpec(originalWidth, View.MeasureSpec.EXACTLY);
-        int heightSpec = View.MeasureSpec.makeMeasureSpec(BIG_ENOUGH_HEIGHT, View.MeasureSpec.UNSPECIFIED);
+        int heightSpec = View.MeasureSpec.makeMeasureSpec(BIG_ENOUGH_HEIGHT, View.MeasureSpec.AT_MOST);
         child.measure(widSpec, heightSpec);
+
+        if (child.getMeasuredHeight() == BIG_ENOUGH_HEIGHT) {
+          heightSpec = View.MeasureSpec.makeMeasureSpec(BIG_ENOUGH_HEIGHT, View.MeasureSpec.UNSPECIFIED);
+          child.measure(widSpec, heightSpec);
+        }
         updateOffset(child.getHeight(), child.getMeasuredHeight(), child);
       } else if (child instanceof ZoomPanLayout) {
         updateOffset(child.getHeight(), ((ZoomPanLayout) child).getScaledHeight(), child);
@@ -187,25 +192,11 @@ public class ScrollShotReceiver extends BroadcastReceiver {
           conflictingHeightWithSameY : newHeight;
       offsetWithY.put(y, newHeight - oldHeight);
     }
-    //TODO: //saveScrollPos(view);
-  }
-
-  private void saveScrollPos(View view) {
-    int[] currScrollPos = new int[2];
-    currScrollPos[0] = view.getScrollX();
-    currScrollPos[1] = view.getScrollY();
-    scrollPos.put(view, currScrollPos);
   }
 
   private void updateTotalOffset() {
     for (Map.Entry<Integer, Integer> entry : offsetWithY.entrySet()) {
       offset = offset + offsetWithY.get(entry.getKey());
-    }
-  }
-
-  private void resetScrollPos() {
-    for (Map.Entry<View, int[]> entry : scrollPos.entrySet()) {
-      entry.getKey().scrollTo(entry.getValue()[0], entry.getValue()[1]);
     }
   }
 }
