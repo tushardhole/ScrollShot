@@ -1,6 +1,6 @@
 # ScrollShot
 
-You can use this library to take full screen scroll shots of android app. Currently it supports scroll shots where entire activiry content is inside a ScrollView or WebView.
+You can use this library to take full screen scroll shots of android app. Currently it supports scroll shots where entire activity content is inside a ScrollView or WebView.
 For other types of view, it will still try to take a scroll shot, but failing to do so will result in a normal legacy screenshot.
 
 
