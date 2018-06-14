@@ -64,7 +64,7 @@ public class ScrollShotLifeCycleCallBack implements Application.ActivityLifecycl
     private void registerShake(WeakReference<Activity> activityReference) {
         shakeDetector = new ShakeDetector(new ScrollShotShakeListener(activityReference));
         Sensor sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        sensorManager.registerListener(new ShakeDetector(new ScrollShotShakeListener(activityReference)), sensor, SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(shakeDetector, sensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
 
