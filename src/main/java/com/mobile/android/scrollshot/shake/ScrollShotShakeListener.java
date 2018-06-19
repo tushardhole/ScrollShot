@@ -23,6 +23,7 @@ public class ScrollShotShakeListener implements ShakeListener {
             if (activityWeakReference.get() != null) {
                 Intent scrollShotIntent = new Intent();
                 scrollShotIntent.setAction(ScrollShotReceiver.SCREENSHOT_RECEIVER_ACTION);
+                scrollShotIntent.putExtra(ScrollShotReceiver.VIEW_SCROLLSHOT_AFTER_CAPTURE, true);
                 ScrollShotReceiver scrollShotReceiver = new ScrollShotReceiver();
                 scrollShotReceiver.onReceive(activityWeakReference.get(), scrollShotIntent);
             }

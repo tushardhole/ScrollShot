@@ -28,7 +28,10 @@ public class ShakeDetector implements SensorEventListener {
 
         float gForce = (float) Math.sqrt(gX * gX + gY * gY + gZ * gZ);
 
-        if (gForce > SHAKE_THRESHOLD_GRAVITY && mShakeTimestamp + SHAKE_SLOP_TIME_MS > now()) {
+        if (gForce > SHAKE_THRESHOLD_GRAVITY) {
+            if(mShakeTimestamp + SHAKE_SLOP_TIME_MS > now()) {
+                return;
+            }
             mShakeTimestamp = now();
             this.onShakeListener.onShake();
         }

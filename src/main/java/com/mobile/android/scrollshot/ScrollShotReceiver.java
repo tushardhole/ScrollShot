@@ -7,8 +7,10 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.net.Uri;
 import android.os.Environment;
 import android.support.annotation.NonNull;
+import android.support.v4.content.FileProvider;
 import android.support.v4.view.ScrollingView;
 import android.text.TextUtils;
 import android.view.View;
@@ -35,8 +37,9 @@ public class ScrollShotReceiver extends BroadcastReceiver {
 
     public static final int BIG_ENOUGH_HEIGHT = 12000;
     public static final String SCREENSHOT_RECEIVER_ACTION = "com.mobile.android.scrollshot";
+    public static final String VIEW_SCROLLSHOT_AFTER_CAPTURE = "view";
     private final String SCREENSHOT_PATH = Environment.getExternalStorageDirectory().toString()
-            + "/scrollshots/";
+            + "/Scrollshots/";
     private final String NAME_BUNDLE_KEY = "name";
 
     private static WeakReference<Activity> currentActivityReference;
@@ -71,6 +74,9 @@ public class ScrollShotReceiver extends BroadcastReceiver {
                         findOffset((ViewGroup) getActivity().findViewById(android.R.id.content));
                         updateTotalOffset();
                         takeScreenShot(true);
+                        if (intent.getBooleanExtra(VIEW_SCROLLSHOT_AFTER_CAPTURE, false)) {
+                            openScrollShotViewIntent();
+                        }
                     } catch (Exception e) {
                         try {
                             fallBackToNormalScreenShot();
@@ -110,6 +116,19 @@ public class ScrollShotReceiver extends BroadcastReceiver {
         writeSceneDataToFile(viewScene);
         viewScene.recycle();
         resetViewLayout();
+    }
+
+    private void openScrollShotViewIntent() {
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        Uri uriForFile = FileProvider.getUriForFile(getActivity(),
+                "com.mobile.android.scrollshot.ScrollShotFileProvider",
+                new File(SCREENSHOT_PATH + "/" + fileName + ".jpeg"));
+        if (uriForFile != null) {
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.setDataAndType(uriForFile, "image/*");
+            getActivity().startActivity(intent);
+        }
     }
 
     @NonNull

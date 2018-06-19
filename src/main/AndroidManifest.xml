@@ -12,6 +12,18 @@
                 <action android:name="com.mobile.android.scrollshot"></action>
             </intent-filter>
         </receiver>
+
+        <provider
+            android:name="android.support.v4.content.FileProvider"
+            android:grantUriPermissions="true"
+            android:exported="false"
+            android:authorities="com.mobile.android.scrollshot.ScrollShotFileProvider">
+
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths"/>
+
+        </provider>
     </application>
 
 </manifest>
