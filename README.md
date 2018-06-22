@@ -49,6 +49,7 @@ If you find any bugs please try to replicate that in [ScrollShotTester](https://
 1. This library is not tested on many physical devices
 2. This library is supports only vertical scroll
 3. This library is not tested much against Webviews
+4. Crashes for OOM with long webviews such as android os wiki page
 ```
 ## Contributing
 ```
