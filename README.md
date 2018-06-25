@@ -40,6 +40,12 @@ Instead of command, You can also shake the phone while the your APP is running t
 
 The command approach is implemented to support scrollshot in automation scripts.
 
+## Build Source Code
+```
+./gradlew buildScrollShot
+```
+Latest artifact is laways copied to 'aar' folder at root level
+
 ## Reporting Bugs
 If you find any bugs please try to replicate that in [ScrollShotTester](https://github.com/tushardhole/ScrollShotTester) by creating a new view in that Application for which scrollshot breaks.
 
