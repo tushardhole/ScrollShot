@@ -10,38 +10,34 @@ but failing to do so will result in a normal screenshot.
 
 
 ## Installation
-
-```
 To add this library to the android application project,
 Go to build.gradle add following dependency,
-```
-
-   _**`compile 'com.github.tushardhole:scrollshot:1.0.0'`**_
 
 ```
+`compile 'com.github.tushardhole:scrollshot:1.0.0'`
+```
+
 To use this library, add following line in onCreate() of your specific Application Class.
-```
 
-   **_`ScrollShot.init(this);`_**
+```java
+ScrollShot.init(this)
+```
 
 ## Usage
+Just shake the device to take the scrollshot and done 💥💥.
 
-To take a scrollshot fire following command,
 
+If the requirement is to take scrollshot in some automation script then please use below command,
 
-    adb shell am broadcast -a com.mobile.android.scrollshot --es name "myScrollShot"
-
+```ruby
+adb shell am broadcast -a com.mobile.android.scrollshot --es name "myScrollShot"
+```
 
 Where "name" is the value with which scrollshot file will be saved.
 Use some file explorer app and open 'scrollshots' folder to view the scrollshot.
 
-
-Instead of command, You can also shake the phone while the your APP is running to take scrollshot.
-
-The command approach is implemented to support scrollshot in automation scripts.
-
 ## Build Source Code
-```
+```ruby
 ./gradlew buildScrollShot
 ```
 Latest artifact is laways copied to 'aar' folder at root level
@@ -58,6 +54,4 @@ If you find any bugs please try to replicate that in [ScrollShotTester](https://
 4. Crashes for OOM with long webviews such as android os wiki page
 ```
 ## Contributing
-```
-BAU PR way is the way to contribute!
-```
+Please use the pull request procedure for contributing
